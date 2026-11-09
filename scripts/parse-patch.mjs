@@ -13,6 +13,7 @@ const requiredIds = [
 ]
 
 if (!/^\s*-\s+id:\s+pwsh-sandbox\b/m.test(text)) throw new Error('patch must be a YAML entry list')
+if (!/^- id: pwsh-sandbox\n\s+name: '@deepseek-ai\/dsh-pwsh-sandbox'\n\s+disabled: false/m.test(text)) throw new Error('root pwsh sandbox must stay enabled for permission-presets')
 const missing = requiredIds.filter(id => !new RegExp(`^\\s*- id: ${id}\\s*$`, 'm').test(text))
 if (missing.length > 0) throw new Error(`missing patch entries: ${missing.join(', ')}`)
 if ((text.match(/^\\s+section: \|/gm) ?? []).length !== 0) throw new Error('plan-mode text must use the shared YAML anchor')

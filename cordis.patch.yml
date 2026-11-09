@@ -1,9 +1,9 @@
-# Coreutils Bash replaces the Windows PowerShell executor for agent presets.
-# The executor is isolated with each preset's bash tool so live bundle changes
-# never create two providers for the same ctx.shell scope.
+# Keep the root sandbox executor available for permission-presets, which mounts
+# in the root context and requires ctx.shell. Preset-local shell isolation below
+# still replaces the executor used by standard, ptc, and cordis agents.
 - id: pwsh-sandbox
   name: '@deepseek-ai/dsh-pwsh-sandbox'
-  disabled: true
+  disabled: false
 
 - id: optional-persistent-terminals
   insert:
