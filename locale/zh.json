@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Coreutils Bash",
+    "description": "在 Windows 上使用由 Microsoft Coreutils 支持的原生 Bash，并保留 Harness 沙箱。"
+  }
+}

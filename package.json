@@ -1,0 +1,40 @@
+{
+  "name": "dsh-coreutils-bash",
+  "version": "1.0.4",
+  "private": true,
+  "description": "Native Bash execution on Windows backed by Microsoft Coreutils",
+  "type": "module",
+  "main": "./executor.js",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./executor.js",
+    "./executor": "./executor.js",
+    "./terminal": "./terminal.js",
+    "./resolve": "./resolve.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "executor.js",
+    "terminal.js",
+    "resolve.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-bash-local": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-bash-sandbox": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-sandbox": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-terminal-bash": "0.2.2-rc.1",
+    "@deepseek-ai/schemastery": "~3.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
