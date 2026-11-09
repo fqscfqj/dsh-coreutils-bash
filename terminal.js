@@ -28,6 +28,7 @@ export const Config = z.object({
 })
 
 function resolveConfig(config) {
+  validateTerminalConfig(config)
   const runtime = resolveCoreutilsRuntime(config)
   if (config.shellDialect !== undefined && config.shellDialect !== 'bash') {
     throw new Error('coreutils-terminal: shellDialect must be bash')
@@ -39,6 +40,27 @@ function resolveConfig(config) {
     shellArgs: terminalShellArgs(config),
     backendType: config.backendType || 'coreutils-bash',
     coreutilsRuntime: runtime
+  }
+}
+
+export function validateTerminalConfig(config) {
+  const positive = ['rows', 'cols', 'scrollbackLines', 'scrollbackMaxBytes', 'maxReadBytes', 'pollIntervalMs', 'exactProbeAfterMs', 'timeoutMs']
+  const nonNegative = ['idleSilenceMs', 'handoffGraceMs', 'promptTailGraceMs', 'disposeGraceMs']
+  for (const key of positive) {
+    if (!Number.isFinite(config[key]) || config[key] <= 0) {
+      throw new Error(`coreutils-terminal: ${key} must be a positive finite number`)
+    }
+  }
+  for (const key of nonNegative) {
+    if (!Number.isFinite(config[key]) || config[key] < 0) {
+      throw new Error(`coreutils-terminal: ${key} must be a non-negative finite number`)
+    }
+  }
+  if (config.maxReadBytes > config.scrollbackMaxBytes) {
+    throw new Error('coreutils-terminal: maxReadBytes must not exceed scrollbackMaxBytes')
+  }
+  if (config.handoffGraceMs < config.pollIntervalMs) {
+    throw new Error('coreutils-terminal: handoffGraceMs must be at least pollIntervalMs')
   }
 }
 

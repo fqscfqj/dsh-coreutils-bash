@@ -6,7 +6,7 @@ const DEFAULT_BASH_ARGS = ['--noprofile', '--norc', '-c']
 
 function clean(value) {
   const unboxed = value !== null && typeof value === 'object' && typeof value.get === 'function' ? value.get() : value
-  return typeof unboxed === 'string' ? unboxed.trim().replace(/^"|"$/g, '') : ''
+  return typeof unboxed === 'string' ? unboxed.trim().replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, (_, doubleQuoted, singleQuoted) => doubleQuoted ?? singleQuoted) : ''
 }
 
 function existingFile(value) {
@@ -90,13 +90,22 @@ function completeCoreutilsBin(path) {
   return REQUIRED_UTILITIES.every((utility) => existingFile(join(path, utility)))
 }
 
-function diagnostic({ bashCandidates, binCandidates, configuredBash, configuredCoreutils }) {
+function diagnostic({ bashCandidates, binCandidates, configuredBash, configuredCoreutils, invalidCoreutilsPath, language }) {
   const bash = bashCandidates.length > 0 ? bashCandidates.join('\n  ') : '(none)'
   const bins = binCandidates.length > 0 ? binCandidates.join('\n  ') : '(none)'
+  if (language === 'zh') {
+    return [
+      'Coreutils Bash 不可用。',
+      configuredBash ? `配置的 bashPath 不存在或不可执行：${configuredBash}` : `已检查的 bash.exe 位置：\n  ${bash}`,
+      invalidCoreutilsPath ? `配置的 coreutilsPath 不存在或不是文件：${invalidCoreutilsPath}` : configuredCoreutils ? `配置的 Coreutils 路径不完整：${configuredCoreutils}` : `已检查的 Coreutils 命令目录：\n  ${bins}`,
+      '请安装 Git for Windows 或 MSYS2 提供 bash.exe，并通过 winget install Microsoft.Coreutils 安装 Microsoft Coreutils。',
+      '可在插件配置中设置 bashPath、coreutilsPath 或 coreutilsBinPath。'
+    ].join('\n')
+  }
   return [
     'Coreutils Bash is unavailable.',
     configuredBash ? `Configured bashPath does not exist or is not executable: ${configuredBash}` : `Checked bash.exe locations:\n  ${bash}`,
-    configuredCoreutils ? `Configured coreutils path is incomplete: ${configuredCoreutils}` : `Checked Coreutils command directories:\n  ${bins}`,
+    invalidCoreutilsPath ? `Configured coreutilsPath does not exist or is not a file: ${invalidCoreutilsPath}` : configuredCoreutils ? `Configured coreutils path is incomplete: ${configuredCoreutils}` : `Checked Coreutils command directories:\n  ${bins}`,
     'Install Git for Windows or MSYS2 for bash.exe, then install Microsoft Coreutils with: winget install Microsoft.Coreutils',
     'You can configure bashPath, coreutilsPath, or coreutilsBinPath in the plugin row.'
   ].join('\n')
@@ -107,20 +116,24 @@ export function resolveCoreutilsRuntime(config = {}, env = process.env) {
   const bashPath = bashCandidates.find(existingFile)
   const binCandidates = coreutilsBinCandidates(config, env)
   const coreutilsBinPath = binCandidates.find(completeCoreutilsBin)
-  if (!bashPath || !coreutilsBinPath) {
+  const configuredCoreutilsPath = clean(config.coreutilsPath)
+  const invalidCoreutilsPath = configuredCoreutilsPath && !existingFile(configuredCoreutilsPath) ? configuredCoreutilsPath : undefined
+  if (!bashPath || !coreutilsBinPath || invalidCoreutilsPath) {
     throw new Error(diagnostic({
       bashCandidates,
       binCandidates,
       configuredBash: clean(config.bashPath),
-      configuredCoreutils: clean(config.coreutilsBinPath || config.coreutilsPath)
+      configuredCoreutils: clean(config.coreutilsBinPath || config.coreutilsPath),
+      invalidCoreutilsPath,
+      language: /^(zh|zh[-_])/i.test(env.LC_ALL || env.LC_MESSAGES || env.LANG || '') ? 'zh' : 'en'
     }))
   }
-  const coreutilsPath = clean(config.coreutilsPath) || join(dirname(coreutilsBinPath), 'coreutils.exe')
+  const coreutilsPath = configuredCoreutilsPath || join(dirname(coreutilsBinPath), 'coreutils.exe')
   return {
     bashPath,
     bashDirectory: dirname(bashPath),
     coreutilsBinPath,
-    coreutilsPath: existingFile(coreutilsPath) ? coreutilsPath : join(dirname(coreutilsBinPath), 'coreutils.exe')
+    coreutilsPath
   }
 }
 

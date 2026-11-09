@@ -1,7 +1,7 @@
 {
   "name": "dsh-coreutils-bash",
   "version": "1.0.4",
-  "private": true,
+  "private": false,
   "description": "Native Bash execution on Windows backed by Microsoft Coreutils",
   "license": "MIT",
   "repository": {
@@ -43,12 +43,15 @@
     "README.en.md",
     "LICENSE"
   ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
-    "@deepseek-ai/dsh-bash-local": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-bash-sandbox": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-sandbox": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-terminal-bash": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-bash-local": ">=0.2.0-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-bash-sandbox": ">=0.2.0-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-sandbox": ">=0.2.0-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-terminal-bash": ">=0.2.0-rc.1 <0.3.0-0",
     "@deepseek-ai/schemastery": "~3.19.0"
   },
   "dsh": {

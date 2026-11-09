@@ -35,7 +35,12 @@ export class CoreutilsBashExecutor extends SandboxBashExecutor {
   static Config = Config
 
   runtime() {
-    return resolveCoreutilsRuntime(pathConfig(this.config))
+    const config = pathConfig(this.config)
+    const key = JSON.stringify({ ...config, PATH: process.env.PATH ?? process.env.Path ?? '', ProgramFiles: process.env.ProgramFiles, LOCALAPPDATA: process.env.LOCALAPPDATA, USERPROFILE: process.env.USERPROFILE })
+    if (this.runtimeCache?.key !== key) {
+      this.runtimeCache = { key, value: resolveCoreutilsRuntime(config) }
+    }
+    return this.runtimeCache.value
   }
 
   argv(spec) {

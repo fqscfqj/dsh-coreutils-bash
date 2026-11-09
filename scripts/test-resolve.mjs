@@ -8,6 +8,9 @@ assert.match(runtime.coreutilsBinPath, /coreutils[\\/]+bin$/i)
 assert.equal(bashCommandArgv(runtime, 'printf ok')[0], runtime.bashPath)
 assert.equal(bashCommandArgv(runtime, 'printf ok').at(-1), 'printf ok')
 assert.equal(prependRuntimePath(runtime, 'C:/Windows/System32').split(';')[0], runtime.coreutilsBinPath)
+assert.equal(resolveCoreutilsRuntime({ bashPath: `'${runtime.bashPath}'`, coreutilsBinPath: `'${runtime.coreutilsBinPath}'` }).bashPath, runtime.bashPath)
+assert.throws(() => resolveCoreutilsRuntime({ bashPath: runtime.bashPath, coreutilsBinPath: runtime.coreutilsBinPath, coreutilsPath: 'C:/missing/coreutils.exe' }), /coreutilsPath does not exist/)
+assert.throws(() => resolveCoreutilsRuntime({ bashPath: 'C:/missing/bash.exe', coreutilsBinPath: 'C:/missing' }, { ...process.env, LANG: 'zh_CN.UTF-8' }), /Coreutils Bash 不可用/)
 
 const script = String.raw`printf 'coreutils-bash-ok\n'; command -v ls; printf 'beta\nalpha\n' | sort; printf '%s\n' '中文'`
 const env = { ...process.env, PATH: prependRuntimePath(runtime, process.env.PATH ?? process.env.Path ?? '') }
