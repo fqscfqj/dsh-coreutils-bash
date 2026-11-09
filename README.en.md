@@ -28,9 +28,13 @@ Microsoft Coreutils supplies native Windows utilities such as `ls`, `cat`, `grep
 
 This bundle is a standard DSH third-party bundle (`package.json` declares `dsh.bundle.patch`) and installs through DSH's standard installation flow:
 
-- **Web UI**: the sidebar **Plugins** page → install, entering an install spec.
+All of the following use the same standard installation flow and are equivalent:
+
+- **Desktop app / Web UI**: the sidebar **Plugins** page → install, entering an install spec — one click.
 - **Agent tool**: ask the agent to call `plugin_manager` `install_bundle`.
 - **CLI**: `dsh plugin add <spec>` (or `dsh plugin --profile <name> add <spec>`).
+
+The GitHub repository spec is recommended; it installs the latest published version directly.
 
 Supported install specs:
 
@@ -41,6 +45,11 @@ Supported install specs:
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
 
 Installation enables the bundle by default. Installation and selection affect every session in the profile; `plugin_manager` tool operations require `danger-full-access` or per-call approval. If the dependency already exists (for example previously wired in by hand as `link:`), the standard install reports `already-installed`; remove it first and install again to run the full flow.
+
+Additional notes:
+
+- Installing from a local directory wires the package in with pnpm `link:`; the peer-dependencies WARN in the install log is expected — those peers are provided by the DSH runtime itself. GitHub / Git URL installs are copy installs and do not emit the warning.
+- Installation is profile-level configuration; a running DSH instance must be restarted (or a new session started) before the newly installed bundle is loaded.
 
 ### Verify the installation
 

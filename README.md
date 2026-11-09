@@ -28,9 +28,13 @@ Microsoft Coreutils 提供的是 `ls`、`cat`、`grep`、`find` 等原生 Window
 
 本 Bundle 是标准的 DSH 第三方 Bundle（`package.json` 声明 `dsh.bundle.patch`），可通过 DSH 标准安装流程安装：
 
-- **Web 界面**：侧栏「插件」页 → 安装，填入安装 spec。
+以下方式走同一条标准安装流程，效果一致：
+
+- **桌面版 / Web 界面**：侧栏「插件」页 → 安装，填入安装 spec，一键完成。
 - **Agent 工具**：让 Agent 调用 `plugin_manager` 的 `install_bundle`。
 - **CLI**：`dsh plugin add <spec>`（指定 profile 用 `dsh plugin --profile <name> add <spec>`）。
+
+推荐使用 GitHub 仓库 spec 安装，可直接获得最新发布版本。
 
 支持的安装 spec：
 
@@ -41,6 +45,11 @@ Microsoft Coreutils 提供的是 `ls`、`cat`、`grep`、`find` 等原生 Window
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
 
 安装即默认启用。安装与启用会作用于该 profile 下的所有会话；`plugin_manager` 工具操作需要 `danger-full-access` 权限或当次审批。若依赖已存在（例如此前以 `link:` 方式手工接入），标准安装会报告 `already-installed`，先移除再安装即可走完整流程。
+
+补充说明：
+
+- 从本地目录安装时以 pnpm `link:` 方式接入，安装日志中的 peer dependencies WARN 属预期现象——这些 peer 由 DSH 运行时自身提供，不影响使用；GitHub / Git URL 安装为复制安装，不会出现该警告。
+- 安装是 profile 级配置，已在运行的 DSH 实例需要重启（或新开会话）后才会加载新安装的 Bundle。
 
 ### 验证安装
 
