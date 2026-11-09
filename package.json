@@ -3,6 +3,23 @@
   "version": "1.0.4",
   "private": true,
   "description": "Native Bash execution on Windows backed by Microsoft Coreutils",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fqscfqj/dsh-coreutils-bash.git"
+  },
+  "homepage": "https://github.com/fqscfqj/dsh-coreutils-bash#readme",
+  "bugs": {
+    "url": "https://github.com/fqscfqj/dsh-coreutils-bash/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "bash",
+    "coreutils",
+    "windows",
+    "shell"
+  ],
   "type": "module",
   "main": "./executor.js",
   "icon": "./icon.svg",
@@ -22,7 +39,9 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "README.en.md",
+    "LICENSE"
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
