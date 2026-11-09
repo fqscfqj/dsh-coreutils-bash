@@ -20,4 +20,9 @@ if ((text.match(/section: &plan-mode-instructions \|/g) ?? []).length !== 1) thr
 if ((text.match(/section: \*plan-mode-instructions/g) ?? []).length !== 2) throw new Error('patch must reuse plan-mode anchor twice')
 if ((text.match(/name: '@deepseek-ai\/dsh-plugin-(?:manager|market)\/tools'\n\s+disabled: true/g) ?? []).length !== 0) throw new Error('profile plugin tools must use profileContext')
 
+if ((text.match(/- id: coreutils-bash-sandbox\b/g) ?? []).length !== 3) throw new Error('coreutils bash executor must be declared once in standard, ptc, and cordis presets')
+if ((text.match(/- id: coreutils-bash-shell\n\s+name: cordis:group\n\s+group: true\n\s+isolate:\n\s+shell: true/g) ?? []).length !== 3) throw new Error('coreutils bash executor must run in a preset-local shell isolation group')
+if (/^- insert:\n\s+- id: coreutils-bash-sandbox\b/m.test(text)) throw new Error('coreutils bash executor must not be inserted in the root scope')
+if ((text.match(/- id: tool-bash\n\s+name: '@deepseek-ai\/dsh-tool-bash'/g) ?? []).length !== 3) throw new Error('tool-bash must be declared in each executable preset')
+
 console.log(JSON.stringify({ requiredIds, bytes: Buffer.byteLength(text) }, null, 2))

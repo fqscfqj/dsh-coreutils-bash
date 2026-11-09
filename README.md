@@ -8,7 +8,7 @@
 
 Bundle 通过一份 [cordis.patch.yml](cordis.patch.yml) 补丁层接入 DSH 的标准组合流程：
 
-- 禁用根组合中的 `pwsh-sandbox` 执行器（`@deepseek-ai/dsh-pwsh-sandbox`），插入本包的 `coreutils-bash-sandbox` 执行器（`dsh-coreutils-bash/executor`）。执行器继承 `@deepseek-ai/dsh-bash-sandbox` 的全部沙箱语义，只把 argv 换成 `bash.exe --noprofile --norc -c <command>`。
+- 禁用根组合中的 `pwsh-sandbox` 执行器（`@deepseek-ai/dsh-pwsh-sandbox`）。每个可执行 Agent 预设都将本包的 `coreutils-bash-sandbox` 执行器（`dsh-coreutils-bash/executor`）和 `tool-bash` 放入各自的本地 `shell` 隔离组，避免旧 PowerShell provider 与新 Bash provider 在同一 `ctx.shell` 作用域注册，也避免同时保留的 preset 版本互相冲突。执行器继承 `@deepseek-ai/dsh-bash-sandbox` 的全部沙箱语义，只把 argv 换成 `bash.exe --noprofile --norc -c <command>`。
 - 重写 `standard`、`ptc`、`cordis`、`minimal` 四个内置预设的 Shell 行：关闭 `tool-pwsh`，启用 `tool-bash`；`minimal` 的持久化 Shell 组改用本包的 `coreutils-bash` PTY 后端。
 - 向持久终端组（`optional-persistent-terminals`，来自官方终端 Bundle）注册 `coreutils-bash` 后端；该 Bundle 未启用时此插入被跳过并给出警告，不影响其余功能。
 - 每个子进程的 `PATH` 最前面都会加上 Coreutils 命令目录和 bash 所在目录，并设置 `DSH_COREUTILS_BASH=1`、`DSH_COREUTILS_BIN` 两个环境变量。
