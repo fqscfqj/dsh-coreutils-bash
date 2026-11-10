@@ -2,16 +2,16 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-这个 Bundle 将 DeepSeek Harness（DSH）在 Windows 上的 PowerShell Shell 替换为由 Microsoft Coreutils 支持的原生 Bash，覆盖一次性命令执行器、四个内置 Agent 预设和持久化终端三条链路。
+这个 Bundle 将 DeepSeek Harness（DSH）在 Windows 上的 Bash 工具切换为由 Microsoft Coreutils 支持的原生 Bash，同时保留官方 PowerShell 能力。标准/ptc/cordis 预设同时提供一次性 `bash` 与 `pwsh`；minimal 预设同时提供持久 Bash 与持久 PowerShell。
 
 ## 工作原理
 
 Bundle 通过一份 [cordis.patch.yml](cordis.patch.yml) 补丁层接入 DSH 的标准组合流程：
 
-- 禁用根组合中的 `pwsh-sandbox` 执行器（`@deepseek-ai/dsh-pwsh-sandbox`）。每个可执行 Agent 预设都将本包的 `coreutils-bash-sandbox` 执行器（`dsh-coreutils-bash/executor`）和 `tool-bash` 放入各自的本地 `shell` 隔离组，避免旧 PowerShell provider 与新 Bash provider 在同一 `ctx.shell` 作用域注册，也避免同时保留的 preset 版本互相冲突。执行器继承 `@deepseek-ai/dsh-bash-sandbox` 的全部沙箱语义，只把 argv 换成 `bash.exe --noprofile --norc -c <command>`。
-- 重写 `standard`、`ptc`、`cordis`、`minimal` 四个内置预设的 Shell 行：关闭 `tool-pwsh`，启用 `tool-bash`；`minimal` 的持久化 Shell 组改用本包的 `coreutils-bash` PTY 后端。
+- 保留根组合中的 `pwsh-sandbox` 执行器（`@deepseek-ai/dsh-pwsh-sandbox`），供 permission-presets 使用；每个可执行 Agent 预设再建立两个互不共享 `ctx.shell` 的隔离组：官方 `pwsh-sandbox` + `tool-pwsh`，以及本包的 `coreutils-bash-sandbox` + `tool-bash`。这样 Bash 和 PowerShell 各自保留完整的沙箱、审批与工具语义，不会因为两个 provider 注册在同一作用域而冲突。
+- 重写 `standard`、`ptc`、`cordis`、`minimal` 四个内置预设的 Shell 行：前三者同时启用 `tool-bash` 与官方 `tool-pwsh`，minimal 同时启用持久 Bash 与官方 `tool-pwsh-persistent`；Bash 与 PowerShell 分别位于独立的 `shell`/`terminals` 隔离域。
 - 向持久终端组（`optional-persistent-terminals`，来自官方终端 Bundle）注册 `coreutils-bash` 后端；该 Bundle 未启用时此插入被跳过并给出警告，不影响其余功能。
-- 每个子进程的 `PATH` 最前面都会加上 Coreutils 命令目录和 bash 所在目录，并设置 `DSH_COREUTILS_BASH=1`、`DSH_COREUTILS_BIN` 两个环境变量。
+- 只有 Bash 子进程的 `PATH` 最前面会加上 Coreutils 命令目录和 bash 所在目录，并设置 `DSH_COREUTILS_BASH=1`、`DSH_COREUTILS_BIN`；原生 pwsh 的命令解析环境不受影响。
 
 Harness 现有的沙箱模式、审批流程、超时预算、输出限制、取消机制和进程清理均保持生效。
 
@@ -99,8 +99,29 @@ echo "$DSH_COREUTILS_BASH"; command -v ls; ls --version
 
 ## 预设行为
 
-- `standard`、`ptc` 和 `cordis` 使用普通的一次性 Bash 工具。
-- `minimal` 使用持久化的 Bash PTY，因此 `cd`、`export`、shell 函数等会话状态在多次调用之间得以保留。
+- `standard`、`ptc` 和 `cordis` 同时提供一次性 `bash` 与 `pwsh`，每次调用都是新进程。
+- `minimal` 同时提供持久 `bash` 与 `pwsh`：Bash 的 `cd`、`export`、函数和 PowerShell 的变量、函数、已导入模块各自保留；两者不共享当前目录或进程内状态。
+- 官方持久终端 Bundle 仍保留 Windows 默认的 PowerShell `shell` 后端，本包只额外注册 `coreutils-bash`，没有替换它。
+
+## 保留 PowerShell 能力
+
+在 `pwsh` 工具中直接使用 PowerShell 语法，不经过 Bash 解析。例如，对象从创建、筛选到取属性都留在同一个 PowerShell 管道中：
+
+```powershell
+1, 2, 3 | ForEach-Object { [pscustomobject]@{ Value = $_; Double = $_ * 2 } } |
+  Where-Object Double -gt 2 | Select-Object Value, Double | ConvertTo-Json -Compress
+```
+
+cmdlet、模块、Windows 路径、`$env:NAME`、注册表 provider 和 PowerShell 内的对象管道仍由原生 PowerShell 提供。本插件不把这些能力翻译成 Bash，也不重新实现 PowerShell 执行器。
+
+边界与原生 DSH 一致：
+
+- 一次性 `pwsh` 使用 `-NoProfile`，不会自动加载用户 profile；需要的模块应在命令中显式 `Import-Module`。跨调用状态使用 minimal 的持久 `pwsh` 或官方 PowerShell 持久终端。
+- `read-only` 的 ConstrainedLanguage 限制 .NET 非核心类型、`Add-Type`、COM、反射等能力；workspace-write 或主机策略也可能限制操作。保留 pwsh 不会绕过沙箱或获得管理员权限。
+- 跨 Bash/PowerShell 进程传递的是字节/文本，不是活对象；需要结构化结果时显式 `ConvertTo-Json`，回到 PowerShell后再 `ConvertFrom-Json`。
+- 旧版或仅有 Bash 的会话仍可显式启动子进程：`pwsh.exe -NoLogo -NoProfile -NonInteractive -Command '$items = 1, 2, 3; $items | ForEach-Object { $_ * 2 }'`。外层单引号防止 Bash 展开 `$`；复杂脚本用 `-File` 加 Windows 路径或 UTF-16LE Base64 `-EncodedCommand`。子进程不保留 pwsh 状态，仍受父进程沙箱约束；遇到权限拒绝不要换 shell 重试。
+
+默认继续使用 Bash 处理常规命令和 Coreutils；涉及 Windows 原生管理或 PowerShell 对象处理时使用 `pwsh`。无需取消本插件或在同一 shell provider 上切换方言。
 
 ## 故障排查
 
@@ -123,7 +144,7 @@ Bash 命令使用 Bash 语法以及 Git Bash/MSYS2 的路径约定。Microsoft C
 
 ## 兼容性
 
-`package.json` 将 `@deepseek-ai/dsh-bash-local`、`@deepseek-ai/dsh-bash-sandbox`、`@deepseek-ai/dsh-sandbox`、`@deepseek-ai/dsh-terminal-bash` 四个 peer 限定在 `>=0.2.0-rc.1 <0.3.0-0`，并通过 `engines.dsh` 声明兼容范围。升级到范围外的 DSH 版本时，安装或启动会被 `incompatible-version` 拒绝；范围内仍需确认复制的执行逻辑与上游 API 兼容。
+`package.json` 将 `@deepseek-ai/dsh-bash-local`、`@deepseek-ai/dsh-bash-sandbox`、`@deepseek-ai/dsh-pwsh-sandbox`、`@deepseek-ai/dsh-tool-pwsh`、`@deepseek-ai/dsh-tool-pwsh-persistent`、`@deepseek-ai/dsh-sandbox`、`@deepseek-ai/dsh-terminal-bash` 七个 peer 限定在 `>=0.2.0-rc.1 <0.3.0-0`，并通过 `engines.dsh` 声明兼容范围。升级到范围外的 DSH 版本时，安装或启动会被 `incompatible-version` 拒绝；范围内仍需确认复制的执行逻辑与上游 API 兼容。
 
 预设补丁整行替换内置预设的 Shell 配置，DSH 预设结构变化时需要同步更新 [cordis.patch.yml](cordis.patch.yml)。
 

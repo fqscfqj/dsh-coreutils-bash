@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Coreutils Bash",
-    "description": "Use native Bash on Windows with Microsoft Coreutils and the existing Harness sandbox."
+    "description": "Use native Bash on Windows with Microsoft Coreutils while retaining the existing Harness PowerShell tools and sandbox."
   }
 }

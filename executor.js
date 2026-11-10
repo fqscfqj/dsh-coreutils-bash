@@ -1,7 +1,7 @@
 import z from '@deepseek-ai/schemastery'
 import { SandboxUnavailableError, classifyRunnerFailure, isRunnerSpawnFailure, matchesSignature } from '@deepseek-ai/dsh-sandbox'
 import { SandboxBashExecutor } from '@deepseek-ai/dsh-bash-sandbox'
-import { bashCommandArgv, prependRuntimePath, resolveCoreutilsRuntime } from './resolve.js'
+import { bashCommandArgv, environmentPath, resolveCoreutilsRuntime, runtimeEnvironment } from './resolve.js'
 
 export const name = 'coreutils-bash'
 export const inject = ['subprocess', 'sandbox', 'sandboxPolicy']
@@ -36,7 +36,7 @@ export class CoreutilsBashExecutor extends SandboxBashExecutor {
 
   runtime() {
     const config = pathConfig(this.config)
-    const key = JSON.stringify({ ...config, PATH: process.env.PATH ?? process.env.Path ?? '', ProgramFiles: process.env.ProgramFiles, LOCALAPPDATA: process.env.LOCALAPPDATA, USERPROFILE: process.env.USERPROFILE })
+    const key = JSON.stringify({ ...config, PATH: environmentPath(), ProgramFiles: process.env.ProgramFiles, LOCALAPPDATA: process.env.LOCALAPPDATA, USERPROFILE: process.env.USERPROFILE })
     if (this.runtimeCache?.key !== key) {
       this.runtimeCache = { key, value: resolveCoreutilsRuntime(config) }
     }
@@ -50,16 +50,10 @@ export class CoreutilsBashExecutor extends SandboxBashExecutor {
 
   spawnSpec(spec, argv, stdoutMaxBytes, signal) {
     const spawn = super.spawnSpec(spec, argv, stdoutMaxBytes, signal)
-    const existingPath = spawn.env?.PATH ?? process.env.PATH ?? process.env.Path ?? ''
     const runtime = this.runtime()
     return {
       ...spawn,
-      env: {
-        ...spawn.env,
-        PATH: prependRuntimePath(runtime, existingPath),
-        DSH_COREUTILS_BASH: '1',
-        DSH_COREUTILS_BIN: runtime.coreutilsBinPath
-      }
+      env: runtimeEnvironment(runtime, spawn.env),
     }
   }
 

@@ -33,6 +33,23 @@
       - id: tool-pwsh
         name: '@deepseek-ai/dsh-tool-pwsh'
         disabled: true
+      - id: pwsh-shell
+        name: cordis:group
+        group: true
+        isolate:
+          shell: true
+        config:
+          - id: preset-pwsh-sandbox
+            name: '@deepseek-ai/dsh-pwsh-sandbox'
+            config:
+              cwd: !!js process.cwd()
+              timeoutMs: 120000
+              maxTimeoutMs: 600000
+              maxOutputBytes: 64000
+              maxSpillBytes: 67108864
+              graceMs: 3000
+          - id: preset-tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
       - id: coreutils-bash-shell
         name: cordis:group
         group: true
@@ -173,6 +190,23 @@
       - id: tool-pwsh
         name: '@deepseek-ai/dsh-tool-pwsh'
         disabled: true
+      - id: pwsh-shell
+        name: cordis:group
+        group: true
+        isolate:
+          shell: true
+        config:
+          - id: preset-pwsh-sandbox
+            name: '@deepseek-ai/dsh-pwsh-sandbox'
+            config:
+              cwd: !!js process.cwd()
+              timeoutMs: 120000
+              maxTimeoutMs: 600000
+              maxOutputBytes: 64000
+              maxSpillBytes: 67108864
+              graceMs: 3000
+          - id: preset-tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
       - id: coreutils-bash-shell
         name: cordis:group
         group: true
@@ -328,6 +362,12 @@
               backendType: coreutils-bash
               shellDialect: bash
               timeoutMs: 300000
+          - id: pwsh-terminal
+            name: '@deepseek-ai/dsh-terminal-bash'
+            config:
+              backendType: coreutils-pwsh
+              shellDialect: pwsh
+              timeoutMs: 300000
           - id: persistent-bash
             name: '@deepseek-ai/dsh-tool-bash-persistent'
             config:
@@ -338,6 +378,12 @@
                 * The command parameter uses Bash syntax and does not need XML escaping.
                 * State persists across calls for this agent.
                 * Prefer relative paths and avoid commands that produce very large output.
+          - id: persistent-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh-persistent'
+            config:
+              backendType: coreutils-pwsh
+              timeoutMs: 300000
+              description: Run commands in a persistent PowerShell shell; current directory and variables persist across calls for this agent.
 
 - id: preset-cordis
   name: '@deepseek-ai/dsh-agent-preset'
@@ -358,6 +404,23 @@
       - id: tool-pwsh
         name: '@deepseek-ai/dsh-tool-pwsh'
         disabled: true
+      - id: pwsh-shell
+        name: cordis:group
+        group: true
+        isolate:
+          shell: true
+        config:
+          - id: preset-pwsh-sandbox
+            name: '@deepseek-ai/dsh-pwsh-sandbox'
+            config:
+              cwd: !!js process.cwd()
+              timeoutMs: 120000
+              maxTimeoutMs: 600000
+              maxOutputBytes: 64000
+              maxSpillBytes: 67108864
+              graceMs: 3000
+          - id: preset-tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
       - id: coreutils-bash-shell
         name: cordis:group
         group: true

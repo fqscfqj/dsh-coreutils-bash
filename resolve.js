@@ -1,4 +1,4 @@
-import { accessSync, constants, existsSync, readdirSync, statSync } from 'node:fs'
+import { accessSync, constants, statSync } from 'node:fs'
 import { dirname, join, basename } from 'node:path'
 
 const REQUIRED_UTILITIES = ['ls.exe', 'cat.exe', 'grep.exe', 'find.exe']
@@ -33,8 +33,13 @@ function existingDirectory(value) {
   }
 }
 
+export function environmentPath(env = process.env) {
+  const value = env.PATH ?? env.Path ?? Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1]
+  return typeof value === 'string' ? value : ''
+}
+
 function pathEntries(env) {
-  const raw = env.PATH ?? env.Path ?? ''
+  const raw = environmentPath(env)
   return raw.split(process.platform === 'win32' ? ';' : ':').map(clean).filter(Boolean)
 }
 
@@ -67,6 +72,19 @@ function executableCandidates(configured, env, names) {
   ])
 }
 
+function configuredCoreutilsBinCandidates(value) {
+  const configured = clean(value)
+  if (!configured) return []
+  if (existingFile(configured)) {
+    const directory = dirname(configured)
+    return unique([directory, join(directory, 'bin'), join(directory, 'cmd'), dirname(directory)])
+  }
+  if (existingDirectory(configured)) {
+    return unique([configured, join(configured, 'bin'), join(configured, 'cmd')])
+  }
+  return [configured]
+}
+
 function coreutilsBinCandidates(config, env) {
   const configuredBin = clean(config?.coreutilsBinPath)
   const configured = clean(config?.coreutilsPath)
@@ -79,10 +97,20 @@ function coreutilsBinCandidates(config, env) {
     ...pathEntries(env).filter((entry) => /coreutils/i.test(entry))
   ]
   if (configuredBin) return [configuredBin]
-  if (configured) return unique([configured, join(configured, 'bin'), join(configured, 'cmd')])
+  if (configured) return configuredCoreutilsBinCandidates(configured)
   return unique([
     ...roots.flatMap((root) => [root, join(root, 'bin'), join(root, 'cmd')])
   ])
+}
+
+function configuredCoreutilsExecutable(configuredPath, coreutilsBinPath) {
+  if (existingFile(configuredPath)) return configuredPath
+  const configured = clean(configuredPath)
+  if (configured) {
+    const candidate = [join(configured, 'coreutils.exe'), join(dirname(configured), 'coreutils.exe')].find(existingFile)
+    if (candidate) return candidate
+  }
+  return join(dirname(coreutilsBinPath), 'coreutils.exe')
 }
 
 function completeCoreutilsBin(path) {
@@ -117,7 +145,7 @@ export function resolveCoreutilsRuntime(config = {}, env = process.env) {
   const binCandidates = coreutilsBinCandidates(config, env)
   const coreutilsBinPath = binCandidates.find(completeCoreutilsBin)
   const configuredCoreutilsPath = clean(config.coreutilsPath)
-  const invalidCoreutilsPath = configuredCoreutilsPath && !existingFile(configuredCoreutilsPath) ? configuredCoreutilsPath : undefined
+  const invalidCoreutilsPath = configuredCoreutilsPath && !existingFile(configuredCoreutilsPath) && !existingDirectory(configuredCoreutilsPath) ? configuredCoreutilsPath : undefined
   if (!bashPath || !coreutilsBinPath || invalidCoreutilsPath) {
     throw new Error(diagnostic({
       bashCandidates,
@@ -128,7 +156,7 @@ export function resolveCoreutilsRuntime(config = {}, env = process.env) {
       language: /^(zh|zh[-_])/i.test(env.LC_ALL || env.LC_MESSAGES || env.LANG || '') ? 'zh' : 'en'
     }))
   }
-  const coreutilsPath = configuredCoreutilsPath || join(dirname(coreutilsBinPath), 'coreutils.exe')
+  const coreutilsPath = configuredCoreutilsExecutable(configuredCoreutilsPath, coreutilsBinPath)
   return {
     bashPath,
     bashDirectory: dirname(bashPath),
@@ -140,6 +168,22 @@ export function resolveCoreutilsRuntime(config = {}, env = process.env) {
 export function prependRuntimePath(runtime, existingPath = '') {
   const separator = process.platform === 'win32' ? ';' : ':'
   return unique([runtime.coreutilsBinPath, runtime.bashDirectory, ...String(existingPath).split(separator).map(clean)]).join(separator)
+}
+
+export function runtimeEnvironment(runtime, env = {}) {
+  const result = { ...env }
+  const pathKey = Object.keys(result).find((key) => key.toLowerCase() === 'path')
+  const existingPath = pathKey === undefined ? environmentPath() : environmentPath(result)
+  // Node sorts environment keys on Windows and keeps only one PATH spelling.
+  for (const key of Object.keys(result)) {
+    if (key.toLowerCase() === 'path') delete result[key]
+  }
+  return {
+    ...result,
+    PATH: prependRuntimePath(runtime, existingPath),
+    DSH_COREUTILS_BASH: '1',
+    DSH_COREUTILS_BIN: runtime.coreutilsBinPath
+  }
 }
 
 export function bashCommandArgv(runtime, command) {

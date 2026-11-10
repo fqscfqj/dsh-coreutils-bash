@@ -1,6 +1,6 @@
 import z from '@deepseek-ai/schemastery'
 import { BashTerminalBackend } from '@deepseek-ai/dsh-terminal-bash'
-import { prependRuntimePath, resolveCoreutilsRuntime, terminalShellArgs } from './resolve.js'
+import { resolveCoreutilsRuntime, runtimeEnvironment, terminalShellArgs } from './resolve.js'
 
 export const name = 'coreutils-terminal'
 export const inject = ['terminals', 'sandboxPolicy', 'subprocess', 'workingDirectory']
@@ -27,9 +27,9 @@ export const Config = z.object({
   disposeGraceMs: z.number().default(3000)
 })
 
-function resolveConfig(config) {
+export function resolveConfig(config) {
   validateTerminalConfig(config)
-  const runtime = resolveCoreutilsRuntime(config)
+  const runtime = resolveCoreutilsRuntime({ ...config, bashPath: config.shellPath || config.bashPath })
   if (config.shellDialect !== undefined && config.shellDialect !== 'bash') {
     throw new Error('coreutils-terminal: shellDialect must be bash')
   }
@@ -68,15 +68,11 @@ class CoreutilsBashTerminalBackend extends BashTerminalBackend {
   constructor(ctx, config) {
     const runtime = config.coreutilsRuntime
     super(ctx, config, (spec) => {
-      const existingPath = spec.env?.PATH ?? process.env.PATH ?? process.env.Path ?? ''
       return ctx.subprocess.spawnTerminal({
         ...spec,
         env: {
-          ...spec.env,
-          PATH: prependRuntimePath(runtime, existingPath),
-          NO_COLOR: '1',
-          DSH_COREUTILS_BASH: '1',
-          DSH_COREUTILS_BIN: runtime.coreutilsBinPath
+          ...runtimeEnvironment(runtime, spec.env),
+          NO_COLOR: '1'
         }
       })
     })

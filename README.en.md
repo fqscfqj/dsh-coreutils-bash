@@ -2,16 +2,16 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-This bundle replaces the DeepSeek Harness (DSH) Windows PowerShell shell surface with native Bash backed by Microsoft Coreutils, across the one-shot executor, the four built-in agent presets, and the persistent terminal.
+This bundle adds native Bash backed by Microsoft Coreutils to DeepSeek Harness (DSH) on Windows while retaining official PowerShell capabilities. The standard/ptc/cordis presets expose both one-shot `bash` and `pwsh`; minimal exposes persistent Bash and PowerShell.
 
 ## How it works
 
 The bundle hooks into DSH's standard composition through a [cordis.patch.yml](cordis.patch.yml) patch layer:
 
-- It disables the root `pwsh-sandbox` executor (`@deepseek-ai/dsh-pwsh-sandbox`). Each executable Agent preset places this package's `coreutils-bash-sandbox` executor (`dsh-coreutils-bash/executor`) and `tool-bash` in its own local `shell` isolation group. This prevents the old PowerShell provider and the new Bash provider from registering in one `ctx.shell` scope, and also prevents concurrently retained preset generations from colliding. The executor extends `@deepseek-ai/dsh-bash-sandbox`, inheriting all of its sandbox semantics, and only swaps the argv to `bash.exe --noprofile --norc -c <command>`.
-- It rewrites the shell rows of the `standard`, `ptc`, `cordis`, and `minimal` presets: `tool-pwsh` off, `tool-bash` on; the `minimal` persistent shell group switches to this package's `coreutils-bash` PTY backend.
+- It keeps the root `pwsh-sandbox` executor (`@deepseek-ai/dsh-pwsh-sandbox`) for permission-presets. Each executable Agent preset mounts two separate `shell` isolation groups: official `pwsh-sandbox` + `tool-pwsh`, and this package's `coreutils-bash-sandbox` + `tool-bash`. The providers never share a `ctx.shell` scope, including concurrently retained preset generations. Each tool retains its own sandbox and approval semantics.
+- It rewrites the shell rows of `standard`, `ptc`, `cordis`, and `minimal`: the first three expose both one-shot tools, while minimal exposes two persistent tools backed by distinct Bash and PowerShell PTY backend types.
 - It registers a `coreutils-bash` backend into the persistent terminal group (`optional-persistent-terminals`, from the official terminal bundle); when that bundle is not selected, the insert is skipped with a warning and everything else keeps working.
-- Every child process gets the Coreutils command directory and the bash directory prepended to `PATH`, plus the `DSH_COREUTILS_BASH=1` and `DSH_COREUTILS_BIN` environment variables.
+- Only Bash child processes get the Coreutils and Bash directories prepended to `PATH`, plus `DSH_COREUTILS_BASH=1` and `DSH_COREUTILS_BIN`; native pwsh command resolution is left unchanged.
 
 Existing Harness sandbox modes, approvals, timeout budgets, output limits, cancellation, and process cleanup remain active.
 
@@ -99,8 +99,29 @@ Besides the same `bashPath` / `coreutilsPath` / `coreutilsBinPath` overrides:
 
 ## Behavior
 
-- `standard`, `ptc`, and `cordis` use the normal one-shot Bash tool.
-- `minimal` uses a persistent Bash PTY, so `cd`, `export`, shell functions, and other session state survive between calls.
+- `standard`, `ptc`, and `cordis` expose both one-shot `bash` and `pwsh`; each call starts a fresh process.
+- `minimal` exposes persistent `bash` and `pwsh`: cwd, variables, functions, and imported modules persist independently in each shell. They do not share process-local state.
+- The official persistent terminal bundle still supplies the default Windows PowerShell `shell` backend; this bundle only adds `coreutils-bash` beside it.
+
+## Preserving PowerShell capabilities
+
+Use native PowerShell syntax directly in the `pwsh` tool, without a Bash parsing layer. Object creation, filtering, and property access remain in one PowerShell pipeline:
+
+```powershell
+1, 2, 3 | ForEach-Object { [pscustomobject]@{ Value = $_; Double = $_ * 2 } } |
+  Where-Object Double -gt 2 | Select-Object Value, Double | ConvertTo-Json -Compress
+```
+
+Cmdlets, modules, Windows paths, `$env:NAME`, the registry provider, and object pipelines within PowerShell remain native PowerShell features. This bundle does not translate them to Bash or reimplement the PowerShell executor.
+
+The native DSH boundaries still apply:
+
+- One-shot `pwsh` uses `-NoProfile`; explicitly `Import-Module` when needed. Use minimal's persistent `pwsh` or the official PowerShell terminal for cross-call state.
+- Read-only ConstrainedLanguage restricts non-core .NET types, `Add-Type`, COM, and reflection. Workspace-write and host policy may also restrict operations. Keeping pwsh does not bypass sandbox policy or grant administrator privileges.
+- Bash/PowerShell process boundaries carry bytes/text rather than live objects; explicitly use `ConvertTo-Json` and `ConvertFrom-Json` for structured interchange.
+- Older or Bash-only sessions can still explicitly launch a child: `pwsh.exe -NoLogo -NoProfile -NonInteractive -Command '$items = 1, 2, 3; $items | ForEach-Object { $_ * 2 }'`. Outer single quotes prevent Bash from expanding `$`; use `-File` with Windows paths or UTF-16LE Base64 `-EncodedCommand` for complex scripts. A child does not retain pwsh state and remains subject to its parent's sandbox. Do not switch shells to retry a denied operation.
+
+Use Bash for regular commands and Coreutils, and `pwsh` for native Windows operations or PowerShell object processing. No provider dialect switching or disabling this bundle is needed.
 
 ## Troubleshooting
 
@@ -123,7 +144,7 @@ Bash commands use Bash syntax and Git Bash/MSYS2 path conventions. Microsoft Cor
 
 ## Compatibility
 
-`package.json` allows the `@deepseek-ai/dsh-bash-local`, `@deepseek-ai/dsh-bash-sandbox`, `@deepseek-ai/dsh-sandbox`, and `@deepseek-ai/dsh-terminal-bash` peers in the range `>=0.2.0-rc.1 <0.3.0-0` and declares the same DSH compatibility through `engines.dsh`. Upgrades outside that range are rejected by dependency validation; versions inside it still require the copied executor logic to remain compatible with the upstream API.
+`package.json` allows the `@deepseek-ai/dsh-bash-local`, `@deepseek-ai/dsh-bash-sandbox`, `@deepseek-ai/dsh-pwsh-sandbox`, `@deepseek-ai/dsh-tool-pwsh`, `@deepseek-ai/dsh-tool-pwsh-persistent`, `@deepseek-ai/dsh-sandbox`, and `@deepseek-ai/dsh-terminal-bash` peers in the range `>=0.2.0-rc.1 <0.3.0-0` and declares the same DSH compatibility through `engines.dsh`. Upgrades outside that range are rejected by dependency validation; versions inside it still require the copied executor logic to remain compatible with the upstream API.
 
 
 The preset patches replace the built-in presets' shell configuration wholesale; when DSH's preset structure changes, [cordis.patch.yml](cordis.patch.yml) must be updated to match.
