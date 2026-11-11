@@ -34,15 +34,29 @@ All of the following use the same standard installation flow and are equivalent:
 - **Agent tool**: ask the agent to call `plugin_manager` `install_bundle`.
 - **CLI**: `dsh plugin add <spec>` (or `dsh plugin --profile <name> add <spec>`).
 
-The GitHub repository spec is recommended; it installs the latest published version directly.
+Installation from [npm](https://www.npmjs.com/package/dsh-coreutils-bash) is recommended. Enter `dsh-coreutils-bash` in the plugin installation page, or run:
+
+```bash
+dsh plugin add dsh-coreutils-bash
+```
+
+Without a version, this installs npm's `latest` release. To pin a version, run:
+
+```bash
+dsh plugin add dsh-coreutils-bash@1.1.0
+```
 
 Supported install specs:
 
 | Form | Example |
 | --- | --- |
+| npm (recommended, latest) | `dsh-coreutils-bash` |
+| npm (pinned version) | `dsh-coreutils-bash@1.1.0` |
 | Local directory (absolute path) | `D:\github\dsh-coreutils-bash` |
 | GitHub repository | `github:fqscfqj/dsh-coreutils-bash` |
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
+
+GitHub / Git URL installs follow the repository's default branch and may include changes not yet published to npm.
 
 Installation enables the bundle by default. Installation and selection affect every session in the profile; `plugin_manager` tool operations require `danger-full-access` or per-call approval. If the dependency already exists (for example previously wired in by hand as `link:`), the standard install reports `already-installed`; remove it first and install again to run the full flow.
 

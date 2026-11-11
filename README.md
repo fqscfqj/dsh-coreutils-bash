@@ -34,15 +34,29 @@ Microsoft Coreutils 提供的是 `ls`、`cat`、`grep`、`find` 等原生 Window
 - **Agent 工具**：让 Agent 调用 `plugin_manager` 的 `install_bundle`。
 - **CLI**：`dsh plugin add <spec>`（指定 profile 用 `dsh plugin --profile <name> add <spec>`）。
 
-推荐使用 GitHub 仓库 spec 安装，可直接获得最新发布版本。
+推荐从 [npm](https://www.npmjs.com/package/dsh-coreutils-bash) 安装：在插件安装页填写 `dsh-coreutils-bash`，或执行：
+
+```bash
+dsh plugin add dsh-coreutils-bash
+```
+
+不指定版本时安装 npm 的 `latest` 版本；需要固定版本时使用：
+
+```bash
+dsh plugin add dsh-coreutils-bash@1.1.0
+```
 
 支持的安装 spec：
 
 | 形式 | 示例 |
 | --- | --- |
+| npm（推荐，latest） | `dsh-coreutils-bash` |
+| npm（固定版本） | `dsh-coreutils-bash@1.1.0` |
 | 本地目录（绝对路径） | `D:\github\dsh-coreutils-bash` |
 | GitHub 仓库 | `github:fqscfqj/dsh-coreutils-bash` |
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
+
+GitHub / Git URL 安装跟随仓库默认分支，可能包含尚未发布到 npm 的改动。
 
 安装即默认启用。安装与启用会作用于该 profile 下的所有会话；`plugin_manager` 工具操作需要 `danger-full-access` 权限或当次审批。若依赖已存在（例如此前以 `link:` 方式手工接入），标准安装会报告 `already-installed`，先移除再安装即可走完整流程。
 
