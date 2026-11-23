@@ -32,14 +32,16 @@ function expr(source) {
   return { __jsExpr: source }
 }
 
+const execShellIds = ['tool-bash', 'tool-pwsh', 'pwsh-shell', 'coreutils-bash-shell']
+const terminalIds = ['terminal-bash', 'terminal-pwsh', 'coreutils-terminal', 'pwsh-terminal', 'persistent-bash', 'persistent-pwsh']
+
 function nonShell(row) {
   const result = structuredClone(row)
-  const shellIds = ['tool-bash', 'tool-pwsh', 'pwsh-shell', 'coreutils-bash-shell']
-  result.config.plugins = result.config.plugins.filter(plugin => !shellIds.includes(plugin.id))
   if (row.config.id === 'minimal') {
     const group = result.config.plugins.find(plugin => plugin.id === 'persistent-shell')
-    const terminalIds = ['terminal-bash', 'terminal-pwsh', 'coreutils-terminal', 'pwsh-terminal', 'persistent-bash', 'persistent-pwsh']
     group.config = group.config.filter(plugin => !terminalIds.includes(plugin.id))
+  } else {
+    result.config.plugins = result.config.plugins.filter(plugin => !execShellIds.includes(plugin.id))
   }
   return result
 }
@@ -106,7 +108,7 @@ for (const row of rows.slice(2)) {
       })
     }
   } else {
-    const shell = plugins.filter(plugin => ['tool-bash', 'tool-pwsh', 'pwsh-shell', 'coreutils-bash-shell'].includes(plugin.id))
+    const shell = plugins.filter(plugin => execShellIds.includes(plugin.id))
     assert.deepEqual(shell, [
       { id: 'tool-pwsh', name: '@deepseek-ai/dsh-tool-pwsh', disabled: true },
       {
@@ -129,6 +131,9 @@ for (const row of rows.slice(2)) {
   const actual = nonShell(row)
   if (upstreamDir) {
     const upstreamPatch = readPatch(join(upstreamDir, 'presets', `${id}.patch.yml`))
+    assert.equal(upstreamPatch.length, 1, `${id}: expected one upstream patch`)
+    assert.deepEqual(Object.keys(upstreamPatch[0]), ['insert'], `${id}: expected one upstream insert`)
+    assert.equal(upstreamPatch[0].insert.length, 1, `${id}: expected one upstream declaration`)
     const official = nonShell(upstreamPatch[0].insert[0])
     assert.deepEqual(actual, official, `${id}: non-shell preset settings differ from ${upstream}@${version}`)
     assert.equal(digest(official), reference[id], `${id}: upstream baseline digest is stale`)
