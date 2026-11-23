@@ -43,7 +43,7 @@ dsh plugin add dsh-coreutils-bash
 Without a version, this installs npm's `latest` release. To pin a version, run:
 
 ```bash
-dsh plugin add dsh-coreutils-bash@1.1.0
+dsh plugin add dsh-coreutils-bash@2.0.0
 ```
 
 Supported install specs:
@@ -51,7 +51,7 @@ Supported install specs:
 | Form | Example |
 | --- | --- |
 | npm (recommended, latest) | `dsh-coreutils-bash` |
-| npm (pinned version) | `dsh-coreutils-bash@1.1.0` |
+| npm (pinned version) | `dsh-coreutils-bash@2.0.0` |
 | Local directory (absolute path) | `D:\github\dsh-coreutils-bash` |
 | GitHub repository | `github:fqscfqj/dsh-coreutils-bash` |
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
@@ -63,7 +63,7 @@ Installation enables the bundle by default. Installation and selection affect ev
 Additional notes:
 
 - Installing from a local directory wires the package in with pnpm `link:`; the peer-dependencies WARN in the install log is expected — those peers are provided by the DSH runtime itself. GitHub / Git URL installs are copy installs and do not emit the warning.
-- Installation is profile-level configuration; a running DSH instance must be restarted (or a new session started) before the newly installed bundle is loaded.
+- Installation affects the whole profile. Follow the host's `application` status and `nextStep`; `applied` does not require a restart.
 
 ### Verify the installation
 
@@ -115,7 +115,7 @@ Besides the same `bashPath` / `coreutilsPath` / `coreutilsBinPath` overrides:
 
 - `standard`, `ptc`, and `cordis` expose both one-shot `bash` and `pwsh`; each call starts a fresh process.
 - `minimal` exposes persistent `bash` and `pwsh`: cwd, variables, functions, and imported modules persist independently in each shell. They do not share process-local state.
-- The official persistent terminal bundle still supplies the default Windows PowerShell `shell` backend; this bundle only adds `coreutils-bash` beside it.
+- On Windows the official persistent terminal panel prefers `pwsh`, then `powershell`. This bundle registers a separate backend named `coreutils-bash`; it does not change the panel's preferred shell.
 
 ## Preserving PowerShell capabilities
 
@@ -158,14 +158,23 @@ Bash commands use Bash syntax and Git Bash/MSYS2 path conventions. Microsoft Cor
 
 ## Compatibility
 
-`package.json` allows the `@deepseek-ai/dsh-bash-local`, `@deepseek-ai/dsh-bash-sandbox`, `@deepseek-ai/dsh-pwsh-sandbox`, `@deepseek-ai/dsh-tool-pwsh`, `@deepseek-ai/dsh-tool-pwsh-persistent`, `@deepseek-ai/dsh-sandbox`, and `@deepseek-ai/dsh-terminal-bash` peers in the range `>=0.2.0-rc.1 <0.3.0-0` and declares the same DSH compatibility through `engines.dsh`. Upgrades outside that range are rejected by dependency validation; versions inside it still require the copied executor logic to remain compatible with the upstream API.
+Version 2.0.0 supports DSH `0.2.3-alpha.2` only. The bundle replaces the complete configuration of four built-in presets: a successful shell command alone does not establish compatibility with another host's presets or sandbox. Check for a matching plugin before upgrading DSH. On an older host, pin `dsh-coreutils-bash@1.1.0`.
 
 
-The preset patches replace the built-in presets' shell configuration wholesale; when DSH's preset structure changes, [cordis.patch.yml](cordis.patch.yml) must be updated to match.
+For a DSH upgrade, fetch the target host with `npm pack @deepseek-ai/dsh-web-app@0.2.3-alpha.2`, extract it and run `node scripts/parse-patch.mjs --upstream <extracted-package-directory>`. It compares all non-shell settings in the four presets, including ordering and Loader expressions.
 
 ## Development
 
-- `scripts/parse-patch.mjs` — verifies the patch layer contains every required entry id.
+On Windows, install the development dependencies and run:
+
+```powershell
+npm install
+npm test
+npm run test:runtime
+npm run test:pwsh
+```
+
+`npm test` checks the preset structure and uses simulated host processes to exercise argv, the environment, sandbox denials, cancellation, background jobs, and persistent terminal startup. The last two commands run the machine's actual Bash/Coreutils and PowerShell; these are not OS sandbox end-to-end tests.
 - `scripts/test-resolve.mjs` — self-check for runtime resolution and a real bash run.
 - `scripts/probe.mjs` — bash + Coreutils probe under a controlled PATH.
 - `scripts/load-installed.mjs` — smoke-loads the executor module from an installed profile.

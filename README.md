@@ -43,7 +43,7 @@ dsh plugin add dsh-coreutils-bash
 不指定版本时安装 npm 的 `latest` 版本；需要固定版本时使用：
 
 ```bash
-dsh plugin add dsh-coreutils-bash@1.1.0
+dsh plugin add dsh-coreutils-bash@2.0.0
 ```
 
 支持的安装 spec：
@@ -51,7 +51,7 @@ dsh plugin add dsh-coreutils-bash@1.1.0
 | 形式 | 示例 |
 | --- | --- |
 | npm（推荐，latest） | `dsh-coreutils-bash` |
-| npm（固定版本） | `dsh-coreutils-bash@1.1.0` |
+| npm（固定版本） | `dsh-coreutils-bash@2.0.0` |
 | 本地目录（绝对路径） | `D:\github\dsh-coreutils-bash` |
 | GitHub 仓库 | `github:fqscfqj/dsh-coreutils-bash` |
 | Git URL | `git+https://github.com/fqscfqj/dsh-coreutils-bash.git` |
@@ -63,7 +63,7 @@ GitHub / Git URL 安装跟随仓库默认分支，可能包含尚未发布到 np
 补充说明：
 
 - 从本地目录安装时以 pnpm `link:` 方式接入，安装日志中的 peer dependencies WARN 属预期现象——这些 peer 由 DSH 运行时自身提供，不影响使用；GitHub / Git URL 安装为复制安装，不会出现该警告。
-- 安装是 profile 级配置，已在运行的 DSH 实例需要重启（或新开会话）后才会加载新安装的 Bundle。
+- 安装作用于整个 profile；以安装操作返回的 `application` 和 `nextStep` 为准。显示 `applied` 时不需要重启。
 
 ### 验证安装
 
@@ -115,7 +115,7 @@ echo "$DSH_COREUTILS_BASH"; command -v ls; ls --version
 
 - `standard`、`ptc` 和 `cordis` 同时提供一次性 `bash` 与 `pwsh`，每次调用都是新进程。
 - `minimal` 同时提供持久 `bash` 与 `pwsh`：Bash 的 `cd`、`export`、函数和 PowerShell 的变量、函数、已导入模块各自保留；两者不共享当前目录或进程内状态。
-- 官方持久终端 Bundle 仍保留 Windows 默认的 PowerShell `shell` 后端，本包只额外注册 `coreutils-bash`，没有替换它。
+- 官方持久终端面板在 Windows 上优先选择 `pwsh`、其次 `powershell`。本包另行注册类型为 `coreutils-bash` 的后端，不更改面板的首选 Shell。
 
 ## 保留 PowerShell 能力
 
@@ -158,13 +158,22 @@ Bash 命令使用 Bash 语法以及 Git Bash/MSYS2 的路径约定。Microsoft C
 
 ## 兼容性
 
-`package.json` 将 `@deepseek-ai/dsh-bash-local`、`@deepseek-ai/dsh-bash-sandbox`、`@deepseek-ai/dsh-pwsh-sandbox`、`@deepseek-ai/dsh-tool-pwsh`、`@deepseek-ai/dsh-tool-pwsh-persistent`、`@deepseek-ai/dsh-sandbox`、`@deepseek-ai/dsh-terminal-bash` 七个 peer 限定在 `>=0.2.0-rc.1 <0.3.0-0`，并通过 `engines.dsh` 声明兼容范围。升级到范围外的 DSH 版本时，安装或启动会被 `incompatible-version` 拒绝；范围内仍需确认复制的执行逻辑与上游 API 兼容。
+2.0.0 仅支持 DSH `0.2.3-alpha.2`。本包会替换四个内置预设的完整配置；只验证 Shell 命令可执行，不足以证明其他 DSH 版本的预设和沙箱行为兼容。升级宿主前请确认有对应的插件版本；仍在使用旧宿主的用户请固定安装 `dsh-coreutils-bash@1.1.0`。
 
-预设补丁整行替换内置预设的 Shell 配置，DSH 预设结构变化时需要同步更新 [cordis.patch.yml](cordis.patch.yml)。
+升级 DSH 时，可用 `npm pack @deepseek-ai/dsh-web-app@0.2.3-alpha.2` 获取目标宿主包并解压，再运行 `node scripts/parse-patch.mjs --upstream <解压后的package目录>`。它逐项比较四个预设的所有非 Shell 配置，包括顺序和 Loader 表达式。
 
 ## 开发
 
-- `scripts/parse-patch.mjs` — 校验补丁层包含全部必需条目 id。
+在 Windows 上安装开发依赖后运行：
+
+```powershell
+npm install
+npm test
+npm run test:runtime
+npm run test:pwsh
+```
+
+`npm test` 检查预设结构，并通过模拟的宿主进程验证 argv、环境、沙箱拒绝、取消、后台和持久终端启动。后两条命令分别运行本机的 Bash/Coreutils 和 PowerShell；它们不是操作系统沙箱的端到端测试。
 - `scripts/test-resolve.mjs` — runtime 解析与真实 bash 执行的自检。
 - `scripts/probe.mjs` — 受控 PATH 环境下的 bash + Coreutils 探测。
 - `scripts/load-installed.mjs` — 从已安装 profile 加载执行器模块做冒烟检查。

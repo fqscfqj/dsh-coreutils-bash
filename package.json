@@ -1,6 +1,6 @@
 {
   "name": "dsh-coreutils-bash",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": false,
   "description": "Native Bash execution on Windows backed by Microsoft Coreutils while retaining native PowerShell",
   "license": "MIT",
@@ -47,27 +47,28 @@
     "scripts/*.mjs"
   ],
   "scripts": {
-    "test": "node --test scripts/test-unit.mjs && node scripts/parse-patch.mjs",
+    "test": "node --test scripts/test-unit.mjs scripts/test-executor.mjs && node scripts/parse-patch.mjs",
     "test:runtime": "node scripts/test-resolve.mjs",
     "test:pwsh": "node scripts/test-pwsh.mjs"
   },
   "engines": {
-    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
+    "dsh": "0.2.3-alpha.2"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.1.0",
-    "@deepseek-ai/dsh-bash-local": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-bash-sandbox": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-pwsh-sandbox": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-tool-pwsh": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-tool-pwsh-persistent": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-sandbox": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-terminal-bash": ">=0.2.0-rc.1 <0.3.0-0",
-    "@deepseek-ai/schemastery": "~3.19.0"
+    "@deepseek-ai/cordis": "~4.2.0-alpha.1",
+    "@deepseek-ai/dsh-bash-sandbox": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-pwsh-sandbox": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-terminal-bash": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-tool-pwsh": "0.2.3-alpha.2",
+    "@deepseek-ai/dsh-tool-pwsh-persistent": "0.2.3-alpha.2",
+    "@deepseek-ai/schemastery": "~3.20.0-alpha.1"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "devDependencies": {
+    "yaml": "^2.8.1"
   }
 }
